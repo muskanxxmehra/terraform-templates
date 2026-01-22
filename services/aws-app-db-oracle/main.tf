@@ -159,14 +159,16 @@ module "db" {
 }
 
 
+#------------------------------------------------------------------------------
 # STEP 5 - S3 Bucket for Data Pump exports
-
+#------------------------------------------------------------------------------
 resource "aws_s3_bucket" "demo_bucket" {
   bucket = var.s3_bucket_name
 
-  tags = merge(var.tags, {
-    Name = var.s3_bucket_name
-  })
+  tags = {
+    Name        = var.s3_bucket_name
+    Environment = var.environment
+  }
 }
 
 resource "aws_s3_bucket_versioning" "demo_bucket" {
