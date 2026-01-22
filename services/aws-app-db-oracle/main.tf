@@ -158,6 +158,24 @@ module "db" {
   tags                 = var.tags
 }
 
+
+# STEP 5 - S3 Bucket for Data Pump exports
+
+resource "aws_s3_bucket" "demo_bucket" {
+  bucket = var.s3_bucket_name
+
+  tags = merge(var.tags, {
+    Name = var.s3_bucket_name
+  })
+}
+
+resource "aws_s3_bucket_versioning" "demo_bucket" {
+  bucket = aws_s3_bucket.demo_bucket.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 # App Server - Created AFTER DB (needs DB private IP)
 module "app" {
   source = "../../modules/ec2-app"
