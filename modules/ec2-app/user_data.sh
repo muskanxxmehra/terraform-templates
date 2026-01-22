@@ -11,12 +11,22 @@ apt-get upgrade -y
 apt-get install -y python3 python3-pip python3-venv python3-dev gcc wget unzip
 apt-get install -y libaio1t64 || apt-get install -y libaio1
 
-# Install Python packages (with --break-system-packages for Ubuntu 24.04)
+# Install Python packages - force reinstall conflicting system packages first
+pip3 install --break-system-packages --ignore-installed typing_extensions blinker werkzeug itsdangerous
 pip3 install --break-system-packages oracledb flask gunicorn
 
 # Verify installation
 which gunicorn
 gunicorn --version
+
+# Get gunicorn path and validate it
+GUNICORN_PATH=$(which gunicorn)
+if [ -z "$GUNICORN_PATH" ]; then
+    echo "ERROR: gunicorn not found, trying alternate location"
+    GUNICORN_PATH="/usr/local/bin/gunicorn"
+fi
+
+echo "Using gunicorn at: $GUNICORN_PATH"
 
 # Create Flask Application
 mkdir -p /opt/flask-app
@@ -118,9 +128,6 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
 APPEOF
 
-# Get gunicorn path
-GUNICORN_PATH=$(which gunicorn)
-
 # Create Systemd Service
 cat > /etc/systemd/system/flask-app.service << SYSTEMDEOF
 [Unit]
@@ -135,7 +142,7 @@ Environment="DB_PORT=1521"
 Environment="DB_SERVICE=XEPDB1"
 Environment="DB_USER=${db_user}"
 Environment="DB_PASSWORD=${db_password}"
-ExecStart=$GUNICORN_PATH -w 2 -b 0.0.0.0:${app_port} app:app
+ExecStart=${GUNICORN_PATH} -w 2 -b 0.0.0.0:${app_port} app:app
 Restart=always
 
 [Install]
