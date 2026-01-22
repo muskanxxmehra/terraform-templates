@@ -11,8 +11,12 @@ apt-get upgrade -y
 apt-get install -y python3 python3-pip python3-venv python3-dev gcc wget unzip
 apt-get install -y libaio1t64 || apt-get install -y libaio1
 
-# Install Python packages
-pip3 install oracledb flask gunicorn --break-system-packages || pip3 install oracledb flask gunicorn
+# Install Python packages (with --break-system-packages for Ubuntu 24.04)
+pip3 install --break-system-packages oracledb flask gunicorn
+
+# Verify installation
+which gunicorn
+gunicorn --version
 
 # Create Flask Application
 mkdir -p /opt/flask-app
@@ -58,18 +62,11 @@ HTML_TEMPLATE = """
         {% else %}
         <div class="success">Connected to Oracle XE successfully!</div>
         {% endif %}
-        <h2>Users ({{ users|length }})</h2>
+        <h2>Customers ({{ customers|length }})</h2>
         <table>
-            <tr><th>ID</th><th>Name</th><th>Email</th></tr>
-            {% for user in users %}
-            <tr><td>{{ user[0] }}</td><td>{{ user[1] }}</td><td>{{ user[2] }}</td></tr>
-            {% endfor %}
-        </table>
-        <h2>Orders ({{ orders|length }})</h2>
-        <table>
-            <tr><th>ID</th><th>User</th><th>Product</th><th>Amount</th></tr>
-            {% for order in orders %}
-            <tr><td>{{ order[0] }}</td><td>{{ order[1] }}</td><td>{{ order[2] }}</td><td>{{ order[3] }}</td></tr>
+            <tr><th>ID</th><th>Name</th><th>Created At</th></tr>
+            {% for customer in customers %}
+            <tr><td>{{ customer[0] }}</td><td>{{ customer[1] }}</td><td>{{ customer[2] }}</td></tr>
             {% endfor %}
         </table>
     </div>
@@ -83,19 +80,17 @@ def get_db_connection():
 
 @app.route('/')
 def index():
-    users, orders, error = [], [], None
+    customers, error = [], None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users ORDER BY user_id")
-        users = cursor.fetchall()
-        cursor.execute("SELECT * FROM orders ORDER BY order_id")
-        orders = cursor.fetchall()
+        cursor.execute("SELECT * FROM customers ORDER BY id")
+        customers = cursor.fetchall()
         cursor.close()
         conn.close()
     except Exception as e:
         error = str(e)
-    return render_template_string(HTML_TEMPLATE, users=users, orders=orders, error=error, db_host=DB_CONFIG['host'], db_service=DB_CONFIG['service_name'])
+    return render_template_string(HTML_TEMPLATE, customers=customers, error=error, db_host=DB_CONFIG['host'], db_service=DB_CONFIG['service_name'])
 
 @app.route('/health')
 def health():
@@ -106,22 +101,25 @@ def health():
     except Exception as e:
         return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
 
-@app.route('/api/users')
-def api_users():
+@app.route('/api/customers')
+def api_customers():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT user_id, name, email FROM users")
-        users = [{'id': r[0], 'name': r[1], 'email': r[2]} for r in cursor.fetchall()]
+        cursor.execute("SELECT id, name, created_at FROM customers")
+        customers = [{'id': r[0], 'name': r[1], 'created_at': str(r[2])} for r in cursor.fetchall()]
         cursor.close()
         conn.close()
-        return jsonify(users)
+        return jsonify(customers)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
 APPEOF
+
+# Get gunicorn path
+GUNICORN_PATH=$(which gunicorn)
 
 # Create Systemd Service
 cat > /etc/systemd/system/flask-app.service << SYSTEMDEOF
@@ -137,7 +135,7 @@ Environment="DB_PORT=1521"
 Environment="DB_SERVICE=XEPDB1"
 Environment="DB_USER=${db_user}"
 Environment="DB_PASSWORD=${db_password}"
-ExecStart=/usr/local/bin/gunicorn -w 2 -b 0.0.0.0:${app_port} app:app
+ExecStart=$GUNICORN_PATH -w 2 -b 0.0.0.0:${app_port} app:app
 Restart=always
 
 [Install]
