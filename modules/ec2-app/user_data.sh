@@ -20,13 +20,13 @@ which gunicorn
 gunicorn --version
 
 # Get gunicorn path and validate it
-GUNICORN_PATH=$(which gunicorn)
-if [ -z "$GUNICORN_PATH" ]; then
+GUNICORN_PATH=$$(which gunicorn)
+if [ -z "$$GUNICORN_PATH" ]; then
     echo "ERROR: gunicorn not found, trying alternate location"
     GUNICORN_PATH="/usr/local/bin/gunicorn"
 fi
 
-echo "Using gunicorn at: $GUNICORN_PATH"
+echo "Using gunicorn at: $$GUNICORN_PATH"
 
 # Create Flask Application
 mkdir -p /opt/flask-app
@@ -67,17 +67,17 @@ HTML_TEMPLATE = """
     <div class="container">
         <h1>Flask App with Oracle XE (Docker)</h1>
         <p><strong>Database:</strong> {{ db_host }}:1521/{{ db_service }}</p>
-        {% if error %}
+        {%% if error %%}
         <div class="error">Error: {{ error }}</div>
-        {% else %}
+        {%% else %%}
         <div class="success">Connected to Oracle XE successfully!</div>
-        {% endif %}
+        {%% endif %%}
         <h2>Customers ({{ customers|length }})</h2>
         <table>
             <tr><th>ID</th><th>Name</th><th>Created At</th></tr>
-            {% for customer in customers %}
+            {%% for customer in customers %%}
             <tr><td>{{ customer[0] }}</td><td>{{ customer[1] }}</td><td>{{ customer[2] }}</td></tr>
-            {% endfor %}
+            {%% endfor %%}
         </table>
     </div>
 </body>
@@ -142,7 +142,7 @@ Environment="DB_PORT=1521"
 Environment="DB_SERVICE=XEPDB1"
 Environment="DB_USER=${db_user}"
 Environment="DB_PASSWORD=${db_password}"
-ExecStart=${GUNICORN_PATH} -w 2 -b 0.0.0.0:${app_port} app:app
+ExecStart=$$GUNICORN_PATH -w 2 -b 0.0.0.0:${app_port} app:app
 Restart=always
 
 [Install]
