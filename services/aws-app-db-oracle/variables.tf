@@ -180,3 +180,9 @@ variable "aws_secret_access_key" {
   sensitive   = true
 }
 
+variable "s3_bucket_name" {
+  description = "S3 bucket name for data pump exports"
+  type        = string
+  default     = "cfwdemobucket"
+}
+
