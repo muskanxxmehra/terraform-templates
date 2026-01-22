@@ -4,8 +4,7 @@ variable "environment" {
 }
 
 variable "tags" {
-  description = "Additional tags"
+  description = "Tags"
   type        = map(string)
   default     = {}
 }
-
