@@ -101,5 +101,6 @@ output "docker_logs_command" {
 output "oracle_sqlplus_command" {
   description = "Command to connect via sqlplus"
   value       = "docker exec -it oracle-xe bash -lc 'sqlplus ${var.db_user}/${var.db_password}@XEPDB1'"
+  sensitive   = true
 }
 
