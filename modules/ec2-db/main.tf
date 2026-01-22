@@ -1,8 +1,8 @@
 ################################################################################
-# EC2 App Module - Application Server on Ubuntu
+# EC2 DB Module - Oracle XE 21c via Docker Compose on Ubuntu
 ################################################################################
 
-resource "aws_instance" "app" {
+resource "aws_instance" "db" {
   ami                         = var.ami_id
   instance_type               = var.instance_type
   subnet_id                   = var.subnet_id
@@ -19,28 +19,20 @@ resource "aws_instance" "app" {
   }
 
   user_data = base64encode(templatefile("${path.module}/user_data.sh", {
-    db_host     = var.db_host
-    db_user     = var.db_user
-    db_password = var.db_password
-    app_port    = var.app_port
+    db_user               = var.db_user
+    db_password           = var.db_password
+    aws_region            = var.aws_region
+    aws_access_key_id     = var.aws_access_key_id
+    aws_secret_access_key = var.aws_secret_access_key
   }))
 
   tags = merge(var.tags, {
-    Name = "${var.environment}-${var.app_name}"
-    Role = "Application"
+    Name     = "${var.environment}-oracle-db-server"
+    Role     = "Database"
+    Database = "Oracle XE 21c (Docker)"
   })
 
   lifecycle {
     create_before_destroy = true
   }
-}
-
-resource "aws_eip" "app" {
-  count    = var.create_eip ? 1 : 0
-  instance = aws_instance.app.id
-  domain   = "vpc"
-
-  tags = merge(var.tags, {
-    Name = "${var.environment}-${var.app_name}-eip"
-  })
 }
