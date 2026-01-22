@@ -2,81 +2,94 @@
 exec > /var/log/user-data.log 2>&1
 set -x
 
-echo "=== Starting Oracle XE 21c Database Server Setup (Docker Compose) ==="
+echo "=== DAY 0 - Oracle XE 21c Database Server Setup ==="
 echo "Start time: $(date)"
 
-apt-get update -y
-apt-get upgrade -y
+#---------------------------------------------------------------------------
+# STEP 1 - Installation of Docker Compose
+#---------------------------------------------------------------------------
+echo "=== STEP 1 - Installing Docker Compose ==="
 
-# Install Docker
-echo "=== Installing Docker ==="
-apt-get remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
-apt-get install -y ca-certificates curl gnupg lsb-release
+sudo apt-get remove docker docker-engine docker.io containerd runc -y
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl gnupg lsb-release
 
-install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-chmod a+r /etc/apt/keyrings/docker.gpg
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker.gpg
 
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+echo \
+"deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker.gpg] \
+https://download.docker.com/linux/ubuntu \
+$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-apt-get update -y
-apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
-systemctl start docker
-systemctl enable docker
-usermod -aG docker ubuntu
+docker --version
+docker compose version
 
-# Install AWS CLI
-echo "=== Installing AWS CLI ==="
-apt-get install -y unzip curl wget
+sudo usermod -aG docker ubuntu
 
-cd /tmp
+#---------------------------------------------------------------------------
+# STEP 2 - Install AWS and configure AWS
+#---------------------------------------------------------------------------
+echo "=== STEP 2 - Installing and Configuring AWS CLI ==="
+
+sudo apt update
+sudo apt install -y unzip curl
+
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip -o awscliv2.zip
-./aws/install --update
+sudo ./aws/install
 rm -rf awscliv2.zip aws
 
+aws --version
+
 %{ if aws_access_key_id != "" && aws_secret_access_key != "" }
-mkdir -p /home/ubuntu/.aws
-cat > /home/ubuntu/.aws/credentials << 'AWSCREDEOF'
-[default]
-aws_access_key_id = ${aws_access_key_id}
-aws_secret_access_key = ${aws_secret_access_key}
-AWSCREDEOF
+# Configure AWS credentials for ubuntu user
+sudo -u ubuntu aws configure set aws_access_key_id ${aws_access_key_id}
+sudo -u ubuntu aws configure set aws_secret_access_key ${aws_secret_access_key}
+sudo -u ubuntu aws configure set region ${aws_region}
+sudo -u ubuntu aws configure set output json
 
-cat > /home/ubuntu/.aws/config << 'AWSCONFIGEOF'
-[default]
-region = ${aws_region}
-output = json
-AWSCONFIGEOF
-
-chown -R ubuntu:ubuntu /home/ubuntu/.aws
-chmod 600 /home/ubuntu/.aws/credentials
+# Also configure for root
+aws configure set aws_access_key_id ${aws_access_key_id}
+aws configure set aws_secret_access_key ${aws_secret_access_key}
+aws configure set region ${aws_region}
+aws configure set output json
 %{ endif }
 
-# Install Oracle Instant Client
-echo "=== Installing Oracle Instant Client ==="
-apt-get install -y libaio1t64 || apt-get install -y libaio1
+#---------------------------------------------------------------------------
+# STEP 3 - Install Oracle Instant Client (includes impdp)
+#---------------------------------------------------------------------------
+echo "=== STEP 3 - Installing Oracle Instant Client ==="
+
+sudo apt update
+sudo apt install -y unzip libaio1t64 || sudo apt install -y unzip libaio1
 
 mkdir -p /home/ubuntu/oracle
 cd /home/ubuntu/oracle
-wget -q https://download.oracle.com/otn_software/linux/instantclient/219000/instantclient-basiclite-linux.x64-21.9.0.0.0dbru.zip
-wget -q https://download.oracle.com/otn_software/linux/instantclient/219000/instantclient-tools-linux.x64-21.9.0.0.0dbru.zip
-unzip -o instantclient-basiclite-linux.x64-21.9.0.0.0dbru.zip
-unzip -o instantclient-tools-linux.x64-21.9.0.0.0dbru.zip
+
+wget https://download.oracle.com/otn_software/linux/instantclient/219000/instantclient-basiclite-linux.x64-21.9.0.0.0dbru.zip
+wget https://download.oracle.com/otn_software/linux/instantclient/219000/instantclient-tools-linux.x64-21.9.0.0.0dbru.zip
+
+unzip -o instantclient-basiclite-*.zip
+unzip -o instantclient-tools-*.zip
 rm -f *.zip
+
 chown -R ubuntu:ubuntu /home/ubuntu/oracle
 
-echo 'export LD_LIBRARY_PATH=$HOME/oracle/instantclient_21_9:$LD_LIBRARY_PATH' >> /home/ubuntu/.bashrc
+# Configure environment for ubuntu user
+echo 'export LD_LIBRARY_PATH=$HOME/oracle/instantclient_21_9' >> /home/ubuntu/.bashrc
 echo 'export PATH=$HOME/oracle/instantclient_21_9:$PATH' >> /home/ubuntu/.bashrc
 
-if [ -f /lib/x86_64-linux-gnu/libaio.so.1t64 ]; then
-  ln -sf /lib/x86_64-linux-gnu/libaio.so.1t64 /lib/x86_64-linux-gnu/libaio.so.1 2>/dev/null || true
-fi
-ldconfig
+sudo ln -sf /lib/x86_64-linux-gnu/libaio.so.1t64 /lib/x86_64-linux-gnu/libaio.so.1 2>/dev/null || true
+sudo ldconfig
 
-# Create Docker Compose
-echo "=== Creating Docker Compose Configuration ==="
+#---------------------------------------------------------------------------
+# STEP 7 - Creation of docker compose file
+#---------------------------------------------------------------------------
+echo "=== STEP 7 - Creating Docker Compose Configuration ==="
+
 mkdir -p /home/ubuntu/oracle_xe
 cd /home/ubuntu/oracle_xe
 
@@ -93,69 +106,68 @@ services:
       - "1521:1521"
     volumes:
       - oracle-data:/opt/oracle/oradata
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "healthcheck.sh"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 120s
-
 volumes:
   oracle-data:
 COMPOSEEOF
 
-# Create Seed SQL
+chown -R ubuntu:ubuntu /home/ubuntu/oracle_xe
+
+#---------------------------------------------------------------------------
+# STEP 8 - Start Oracle XE Container
+#---------------------------------------------------------------------------
+echo "=== STEP 8 - Starting Oracle XE Container ==="
+
+cd /home/ubuntu/oracle_xe
+docker compose up -d
+
+echo "Waiting for Oracle XE to start (this may take 2-3 minutes)..."
+sleep 180
+
+# Check container status
+docker ps
+docker logs oracle-xe | tail -20
+
+#---------------------------------------------------------------------------
+# STEP 9 - Create and Run seed.sql
+#---------------------------------------------------------------------------
+echo "=== STEP 9 - Creating and Running Seed SQL ==="
+
 cat > /home/ubuntu/oracle_xe/seed.sql << 'SQLEOF'
-CREATE TABLE users (
-  user_id NUMBER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-  name VARCHAR2(100) NOT NULL,
-  email VARCHAR2(100) UNIQUE NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE customers (
+  id NUMBER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  name VARCHAR2(100),
+  created_at TIMESTAMP DEFAULT SYSTIMESTAMP
 );
 
-CREATE TABLE orders (
-  order_id NUMBER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-  user_id NUMBER NOT NULL,
-  product VARCHAR2(200) NOT NULL,
-  amount NUMBER(10,2) NOT NULL,
-  order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(user_id)
-);
-
-INSERT INTO users (user_id, name, email) VALUES (1, 'Alice Johnson', 'alice@example.com');
-INSERT INTO users (user_id, name, email) VALUES (2, 'Bob Smith', 'bob@example.com');
-INSERT INTO users (user_id, name, email) VALUES (3, 'Carol Williams', 'carol@example.com');
-INSERT INTO users (user_id, name, email) VALUES (4, 'David Brown', 'david@example.com');
-INSERT INTO users (user_id, name, email) VALUES (5, 'Eva Martinez', 'eva@example.com');
-
-INSERT INTO orders (order_id, user_id, product, amount) VALUES (1, 1, 'Laptop Pro 15', 1299.99);
-INSERT INTO orders (order_id, user_id, product, amount) VALUES (2, 1, 'Wireless Mouse', 49.99);
-INSERT INTO orders (order_id, user_id, product, amount) VALUES (3, 2, 'Mechanical Keyboard', 159.99);
-INSERT INTO orders (order_id, user_id, product, amount) VALUES (4, 2, 'Monitor 27 inch', 399.99);
-INSERT INTO orders (order_id, user_id, product, amount) VALUES (5, 3, 'USB-C Hub', 79.99);
+INSERT INTO customers(name) VALUES ('Alice');
+INSERT INTO customers(name) VALUES ('Bob');
 
 COMMIT;
 SQLEOF
 
-chown -R ubuntu:ubuntu /home/ubuntu/oracle_xe
+chown ubuntu:ubuntu /home/ubuntu/oracle_xe/seed.sql
 
-# Start Oracle XE
-echo "=== Starting Oracle XE Container ==="
-cd /home/ubuntu/oracle_xe
-docker compose up -d
+# Wait a bit more and run seed script
+sleep 30
 
-echo "Waiting for Oracle XE to start..."
-sleep 180
-
-# Run Seed Script
-echo "=== Running Seed Script ==="
 docker exec -i oracle-xe bash -lc "sqlplus ${db_user}/${db_password}@XEPDB1" < /home/ubuntu/oracle_xe/seed.sql || {
+  echo "First attempt failed, retrying in 60 seconds..."
   sleep 60
   docker exec -i oracle-xe bash -lc "sqlplus ${db_user}/${db_password}@XEPDB1" < /home/ubuntu/oracle_xe/seed.sql
 }
 
-# Create Systemd Service
+# Verify data
+echo "=== Verifying Data ==="
+docker exec -it oracle-xe bash -lc "sqlplus ${db_user}/${db_password}@XEPDB1 <<SQL
+SELECT * FROM customers;
+EXIT;
+SQL"
+
+#---------------------------------------------------------------------------
+# Create Systemd Service for Auto-Start
+#---------------------------------------------------------------------------
+echo "=== Creating Systemd Service ==="
+
 cat > /etc/systemd/system/oracle-xe-docker.service << 'SYSTEMDEOF'
 [Unit]
 Description=Oracle XE Docker Compose Service
@@ -177,4 +189,18 @@ SYSTEMDEOF
 systemctl daemon-reload
 systemctl enable oracle-xe-docker
 
-echo "=== Oracle XE 21c Database Server Setup Complete ==="
+#---------------------------------------------------------------------------
+# Final Output
+#---------------------------------------------------------------------------
+echo "=== DAY 0 Setup Complete ==="
+echo "End time: $(date)"
+echo ""
+echo "Connection Info:"
+echo "  Host: $(hostname -I | awk '{print $1}')"
+echo "  Port: 1521"
+echo "  Service: XEPDB1"
+echo "  User: ${db_user}"
+echo ""
+echo "Useful Commands:"
+echo "  docker logs -f oracle-xe"
+echo "  docker exec -it oracle-xe bash -lc 'sqlplus ${db_user}/${db_password}@XEPDB1'"
