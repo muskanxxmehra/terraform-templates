@@ -52,7 +52,7 @@ provider "aws" {
       Environment = var.environment
       ManagedBy   = "Terraform"
       Service     = "aws-app-oracle-db-docker"
-      Database    = "Oracle XE 21c (Docker)"
+      Database    = "Oracle-XE-21c-Docker"
     }
   }
 }
