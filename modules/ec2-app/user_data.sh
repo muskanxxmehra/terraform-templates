@@ -69,7 +69,7 @@ HTML_TEMPLATE = """
         <table>
             <tr><th>ID</th><th>User</th><th>Product</th><th>Amount</th></tr>
             {% for order in orders %}
-            <tr><td>{{ order[0] }}</td><td>{{ order[1] }}</td><td>{{ order[2] }}</td><td>${{ "%.2f" %% order[3] }}</td></tr>
+            <tr><td>{{ order[0] }}</td><td>{{ order[1] }}</td><td>{{ order[2] }}</td><td>{{ order[3] }}</td></tr>
             {% endfor %}
         </table>
     </div>
