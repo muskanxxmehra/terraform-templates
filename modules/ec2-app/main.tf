@@ -25,7 +25,7 @@ resource "aws_instance" "app" {
     set -x
 
     echo "=== Starting App Server Setup (Oracle XE Client) ==="
-    echo "Start time: $(date)"
+    echo "Start time: $$(date)"
 
     # Update system
     apt-get update -y
@@ -55,13 +55,13 @@ resource "aws_instance" "app" {
       rm -f instantclient-basic.zip
       
       # Find and set up the instant client directory
-      INSTANT_CLIENT_DIR=$(find /opt/oracle -maxdepth 1 -type d -name "instantclient*" | head -1)
+      INSTANT_CLIENT_DIR=$$(find /opt/oracle -maxdepth 1 -type d -name "instantclient*" | head -1)
       
-      if [ -n "$INSTANT_CLIENT_DIR" ]; then
-        ln -sf $INSTANT_CLIENT_DIR /opt/oracle/instantclient
+      if [ -n "$$INSTANT_CLIENT_DIR" ]; then
+        ln -sf $$INSTANT_CLIENT_DIR /opt/oracle/instantclient
         
         # Configure library path
-        echo "$INSTANT_CLIENT_DIR" > /etc/ld.so.conf.d/oracle-instantclient.conf
+        echo "$$INSTANT_CLIENT_DIR" > /etc/ld.so.conf.d/oracle-instantclient.conf
         ldconfig
       fi
     fi
@@ -72,9 +72,9 @@ resource "aws_instance" "app" {
     fi
 
     # Set Oracle environment variables
-    cat > /etc/profile.d/oracle-client.sh <<'ORAENV'
-export LD_LIBRARY_PATH=/opt/oracle/instantclient:$LD_LIBRARY_PATH
-export PATH=/opt/oracle/instantclient:$PATH
+    cat > /etc/profile.d/oracle-client.sh <<ORAENV
+export LD_LIBRARY_PATH=/opt/oracle/instantclient:\$$LD_LIBRARY_PATH
+export PATH=/opt/oracle/instantclient:\$$PATH
 ORAENV
 
     source /etc/profile.d/oracle-client.sh 2>/dev/null || true
@@ -110,11 +110,11 @@ app = Flask(__name__)
 
 # Database configuration
 DB_CONFIG = {
-    'host': os.environ.get('DB_HOST', '${var.db_host}'),
+    'host': os.environ.get('DB_HOST', 'localhost'),
     'port': int(os.environ.get('DB_PORT', '1521')),
     'service_name': os.environ.get('DB_SERVICE', 'XEPDB1'),
-    'user': os.environ.get('DB_USER', '${var.db_user}'),
-    'password': os.environ.get('DB_PASSWORD', '${var.db_password}')
+    'user': os.environ.get('DB_USER', 'appuser'),
+    'password': os.environ.get('DB_PASSWORD', 'password')
 }
 
 HTML_TEMPLATE = """
@@ -141,7 +141,7 @@ HTML_TEMPLATE = """
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Flask Application on AWS with <span class="oracle-logo">Oracle XE</span> <span class="docker-badge">Docker</span></h1>
+        <h1>Flask Application on AWS with <span class="oracle-logo">Oracle XE</span> <span class="docker-badge">Docker</span></h1>
         
         <div class="info">
             <strong>Database Connection:</strong> {{ db_host }}:1521/{{ db_service }}<br>
@@ -154,11 +154,11 @@ HTML_TEMPLATE = """
         </div>
         {% else %}
         <div class="status success">
-            <strong>✓ Connected to Oracle XE successfully!</strong>
+            <strong>Connected to Oracle XE successfully!</strong>
         </div>
         {% endif %}
 
-        <h2>👥 Users ({{ users|length }} records)</h2>
+        <h2>Users ({{ users|length }} records)</h2>
         {% if users %}
         <table>
             <tr><th>ID</th><th>Name</th><th>Email</th><th>Created</th></tr>
@@ -175,7 +175,7 @@ HTML_TEMPLATE = """
         <p>No users found.</p>
         {% endif %}
 
-        <h2>📦 Orders ({{ orders|length }} records)</h2>
+        <h2>Orders ({{ orders|length }} records)</h2>
         {% if orders %}
         <table>
             <tr><th>Order ID</th><th>User ID</th><th>Product</th><th>Amount</th><th>Date</th></tr>
@@ -184,7 +184,7 @@ HTML_TEMPLATE = """
                 <td>{{ order[0] }}</td>
                 <td>{{ order[1] }}</td>
                 <td>{{ order[2] }}</td>
-                <td>${{ "%.2f"|format(order[3]) }}</td>
+                <td>${{ "%.2f" % order[3] }}</td>
                 <td>{{ order[4] }}</td>
             </tr>
             {% endfor %}
@@ -311,7 +311,7 @@ def db_info():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=${var.app_port}, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
 FLASKAPP
 
     #---------------------------------------------------------------------------
@@ -351,9 +351,9 @@ SYSTEMD
     systemctl start flask-app
 
     echo "=== App Server Setup Complete ==="
-    echo "End time: $(date)"
+    echo "End time: $$(date)"
     echo ""
-    echo "Application URL: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):${var.app_port}"
+    echo "Application URL: http://$$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):${var.app_port}"
   EOF
 
   tags = merge(var.tags, {
@@ -375,4 +375,3 @@ resource "aws_eip" "app" {
     Name = "${var.environment}-${var.app_name}-eip"
   })
 }
-
