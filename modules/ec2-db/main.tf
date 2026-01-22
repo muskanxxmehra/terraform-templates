@@ -18,7 +18,7 @@ resource "aws_instance" "db" {
     encrypted             = true
   }
 
-  user_data = base64encode(templatefile("${path.module}/user_data.sh", {
+  user_data_base64 = base64encode(templatefile("${path.module}/user_data.sh", {
     db_user               = var.db_user
     db_password           = var.db_password
     aws_region            = var.aws_region
