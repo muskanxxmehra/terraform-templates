@@ -1,5 +1,5 @@
 ################################################################################
-# IAM Module - Instance Profile for EC2
+# IAM Module - EC2 Instance Role and Profile
 ################################################################################
 
 resource "aws_iam_role" "ec2_role" {
@@ -17,13 +17,6 @@ resource "aws_iam_role" "ec2_role" {
       }
     ]
   })
-
-  tags = var.tags
-}
-
-resource "aws_iam_role_policy_attachment" "ssm" {
-  role       = aws_iam_role.ec2_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_iam_instance_profile" "ec2_profile" {
@@ -31,3 +24,12 @@ resource "aws_iam_instance_profile" "ec2_profile" {
   role = aws_iam_role.ec2_role.name
 }
 
+resource "aws_iam_role_policy_attachment" "ssm" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_role_policy_attachment" "s3" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+}
