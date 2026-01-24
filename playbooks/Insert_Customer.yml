@@ -1,6 +1,6 @@
 ---
 - name: Oracle INSERT Operation
-  hosts: 3.110.62.109
+  hosts: "{{ db_host }}"
   gather_facts: false
   vars:
     ansible_user: ubuntu
@@ -11,7 +11,7 @@
         dest: /tmp/insert_customer.sql
         content: |
           INSERT INTO customers (customer_name, email, country_name) 
-          VALUES ('Azalio', 'azalio.test@example.com', 'India');
+          VALUES ('{{ customer_name }}', '{{ customer_email }}', '{{ country_name }}');
           COMMIT;
           EXIT;
 
