@@ -1,7 +1,6 @@
 ################################################################################
 # EC2 DB Module - Oracle XE 21c via Docker Compose on Ubuntu
 ################################################################################
-
 resource "aws_instance" "db" {
   ami                         = var.ami_id
   instance_type               = var.instance_type
@@ -9,7 +8,7 @@ resource "aws_instance" "db" {
   vpc_security_group_ids      = [var.security_group_id]
   key_name                    = var.key_name
   iam_instance_profile        = var.iam_instance_profile
-  associate_public_ip_address = true
+  associate_public_ip_address = false
 
   root_block_device {
     volume_type           = "gp3"
@@ -35,4 +34,12 @@ resource "aws_instance" "db" {
   lifecycle {
     create_before_destroy = true
   }
+}
+
+################################################################################
+# Associate Existing EIP with EC2 Instance
+################################################################################
+resource "aws_eip_association" "db" {
+  instance_id   = aws_instance.db.id
+  allocation_id = var.elastic_ip_allocation_id
 }
