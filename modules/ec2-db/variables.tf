@@ -1,7 +1,6 @@
 ################################################################################
 # EC2 DB Module Variables - Oracle XE via Docker on Ubuntu
 ################################################################################
-
 variable "ami_id" {
   description = "AMI ID (Ubuntu 22.04 or 24.04 recommended)"
   type        = string
@@ -82,9 +81,13 @@ variable "aws_secret_access_key" {
   sensitive   = true
 }
 
+variable "elastic_ip_allocation_id" {
+  description = "Allocation ID of existing Elastic IP to associate with the instance"
+  type        = string
+}
+
 variable "tags" {
   description = "Additional tags"
   type        = map(string)
   default     = {}
 }
-
