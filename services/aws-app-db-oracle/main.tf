@@ -142,25 +142,25 @@ module "security" {
 module "db" {
   source = "../../modules/ec2-db"
 
-  ami_id               = local.ami_id
-  instance_type        = var.db_instance_type  # Minimum t3.medium for Oracle XE
-  subnet_id            = module.vpc.public_subnet_id
-  security_group_id    = module.security.db_sg_id
-  key_name             = var.key_name
-  iam_instance_profile = module.iam.instance_profile_name
-  environment          = var.environment
-  root_volume_size     = var.db_volume_size  # Minimum 20GB for Oracle XE
-  db_user              = var.db_user
-  db_password          = var.db_password
-  aws_region           = var.aws_region
-  aws_access_key_id    = var.aws_access_key_id
-  aws_secret_access_key = var.aws_secret_access_key
-  tags                 = var.tags
+  ami_id                   = local.ami_id
+  instance_type            = var.db_instance_type  # Minimum t3.medium for Oracle XE
+  subnet_id                = module.vpc.public_subnet_id
+  security_group_id        = module.security.db_sg_id
+  key_name                 = var.key_name
+  iam_instance_profile     = module.iam.instance_profile_name
+  environment              = var.environment
+  root_volume_size         = var.db_volume_size  # Minimum 20GB for Oracle XE
+  db_user                  = var.db_user
+  db_password              = var.db_password
+  aws_region               = var.aws_region
+  aws_access_key_id        = var.aws_access_key_id
+  aws_secret_access_key    = var.aws_secret_access_key
+  elastic_ip_allocation_id = var.db_elastic_ip_allocation_id
+  tags                     = var.tags
 }
 
-
 #------------------------------------------------------------------------------
-# STEP 5 - S3 Bucket for Data Pump exports
+# S3 Bucket for Data Pump exports
 #------------------------------------------------------------------------------
 resource "aws_s3_bucket" "demo_bucket" {
   bucket = var.s3_bucket_name
@@ -206,4 +206,3 @@ module "app" {
   # Explicit dependency - wait for DB to be ready
   depends_on = [module.db]
 }
-
