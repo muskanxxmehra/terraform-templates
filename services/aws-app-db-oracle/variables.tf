@@ -162,6 +162,11 @@ variable "db_password" {
   }
 }
 
+variable "db_elastic_ip_allocation_id" {
+  description = "Allocation ID of existing Elastic IP to associate with the DB instance"
+  type        = string
+}
+
 #------------------------------------------------------------------------------
 # AWS CLI Configuration (Optional - for Data Pump S3 integration)
 #------------------------------------------------------------------------------
@@ -185,4 +190,3 @@ variable "s3_bucket_name" {
   type        = string
   default     = "cfwdemobucket"
 }
-
