@@ -1,0 +1,27 @@
+---
+- name: Oracle INSERT Operation
+  hosts: 3.110.62.109
+  gather_facts: false
+  vars:
+    ansible_user: ubuntu
+
+  tasks:
+    - name: Create INSERT SQL file
+      copy:
+        dest: /tmp/insert_customer.sql
+        content: |
+          INSERT INTO customers (customer_name, email, country_name) 
+          VALUES ('Azalio', 'azalio.test@example.com', 'India');
+          COMMIT;
+          EXIT;
+
+    - name: Copy SQL file into container
+      command: docker cp /tmp/insert_customer.sql oracle-xe:/tmp/insert_customer.sql
+
+    - name: Execute INSERT statement
+      command: docker exec oracle-xe sqlplus -S appuser/Azalio123456@XEPDB1 @/tmp/insert_customer.sql
+      register: sql_result
+
+    - name: Show result
+      debug:
+        var: sql_result.stdout_lines
