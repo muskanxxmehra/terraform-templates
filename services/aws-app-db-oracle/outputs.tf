@@ -114,3 +114,18 @@ output "s3_bucket_arn" {
   value       = aws_s3_bucket.demo_bucket.arn
 }
 
+output "db_elastic_ip_association_id" {
+  description = "Database server EIP association ID"
+  value       = module.db.elastic_ip_association_id
+}
+
+output "oracle_connection_string_public" {
+  description = "Oracle connection string (using public EIP)"
+  value       = module.db.connection_string_public
+}
+
+output "oracle_jdbc_url_public" {
+  description = "Oracle JDBC URL (using public EIP)"
+  value       = module.db.jdbc_url_public
+}
+
