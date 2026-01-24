@@ -77,7 +77,7 @@ db_elastic_ip_allocation_id = "eipalloc-0bce288fb29cb7bd4"
 #------------------------------------------------------------------------------
 # S3 Bucket for Data Pump exports
 #------------------------------------------------------------------------------
-s3_bucket_name = "your-unique-bucket-name"
+s3_bucket_name = "cfwdemobucket"
 
 #------------------------------------------------------------------------------
 # AWS CLI Configuration (Optional)
