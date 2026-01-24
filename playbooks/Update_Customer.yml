@@ -1,0 +1,28 @@
+---
+- name: Oracle UPDATE Operation
+  hosts: 3.110.62.109
+  gather_facts: false
+  vars:
+    ansible_user: ubuntu
+
+  tasks:
+    - name: Create UPDATE SQL file
+      copy:
+        dest: /tmp/update_customer.sql
+        content: |
+          UPDATE customers 
+          SET email = 'updated.email@example.com'
+          WHERE customer_name = 'RIA_TestUser';
+          COMMIT;
+          EXIT;
+
+    - name: Copy SQL file into container
+      command: docker cp /tmp/update_customer.sql oracle-xe:/tmp/update_customer.sql
+
+    - name: Execute UPDATE statement
+      command: docker exec oracle-xe sqlplus -S appuser/Azalio123456@XEPDB1 @/tmp/update_customer.sql
+      register: sql_result
+
+    - name: Show result
+      debug:
+        var: sql_result.stdout_lines
