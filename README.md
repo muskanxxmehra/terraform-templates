@@ -261,14 +261,4 @@ Approximate monthly costs (ap-south-1 region):
 terraform destroy
 ```
 
-## License
-
-This project is provided as-is for educational and development purposes.
-
-## References
-
-- [gvenzl/oracle-xe Docker Image](https://github.com/gvenzl/oci-oracle-xe)
-- [python-oracledb Documentation](https://python-oracledb.readthedocs.io/)
-- [Oracle XE Documentation](https://docs.oracle.com/en/database/oracle/oracle-database/21/xeinl/)
-- [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
 
