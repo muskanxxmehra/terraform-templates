@@ -1,27 +1,31 @@
 ---
 - name: Oracle DELETE Operation
-  hosts: 3.110.62.109
+  hosts: "{{ db_host }}"
   gather_facts: false
   vars:
     ansible_user: ubuntu
-
+    customer_id: "{{ customer_id }}"
+    db_user: "{{ db_user | default('appuser') }}"
+    db_password: "{{ db_password | default('Azalio123456') }}"
+    db_service: "{{ db_service | default('XEPDB1') }}"
+ 
   tasks:
     - name: Create DELETE SQL file
       copy:
         dest: /tmp/delete_customer.sql
         content: |
           DELETE FROM customers 
-          WHERE customer_name = 'RIA_TestUser';
+          WHERE customer_id = {{ customer_id }};
           COMMIT;
           EXIT;
-
+ 
     - name: Copy SQL file into container
       command: docker cp /tmp/delete_customer.sql oracle-xe:/tmp/delete_customer.sql
-
+ 
     - name: Execute DELETE statement
-      command: docker exec oracle-xe sqlplus -S appuser/Azalio123456@XEPDB1 @/tmp/delete_customer.sql
+      command: docker exec oracle-xe sqlplus -S {{ db_user }}/{{ db_password }}@{{ db_service }} @/tmp/delete_customer.sql
       register: sql_result
-
+ 
     - name: Show result
       debug:
         var: sql_result.stdout_lines
