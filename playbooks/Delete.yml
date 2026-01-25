@@ -1,6 +1,6 @@
 ---
 - name: Oracle DELETE Operation
-  hosts: "{{ db_host }}"
+  hosts: all
   gather_facts: false
   vars:
     ansible_user: ubuntu
