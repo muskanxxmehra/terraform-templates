@@ -6,9 +6,6 @@
     ansible_user: ubuntu
     customer_id: "{{ customer_id }}"
     new_email: "{{ new_email }}"
-    db_user: "{{ db_user | default('appuser') }}"
-    db_password: "{{ db_password | default('Azalio123456') }}"
-    db_service: "{{ db_service | default('XEPDB1') }}"
  
   tasks:
     - name: Create UPDATE SQL file
@@ -25,7 +22,7 @@
       command: docker cp /tmp/update_customer.sql oracle-xe:/tmp/update_customer.sql
  
     - name: Execute UPDATE statement
-      command: docker exec oracle-xe sqlplus -S {{ db_user }}/{{ db_password }}@{{ db_service }} @/tmp/update_customer.sql
+      command: docker exec oracle-xe sqlplus -S appuser/Azalio123456@XEPDB1 @/tmp/update_customer.sql
       register: sql_result
  
     - name: Show result
