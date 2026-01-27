@@ -133,6 +133,9 @@ docker logs oracle-xe | tail -20
 echo "=== STEP 9 - Creating and Running Seed SQL ==="
 
 cat > /home/ubuntu/oracle_xe/seed.sql << 'SQLEOF'
+-- Disable substitution variables (& character)
+SET DEFINE OFF
+
 -- ============================
 -- DROP TABLES (SAFE)
 -- ============================
