@@ -20,10 +20,10 @@
 # - Minimum 20GB root volume
 # - Port 1521 for Oracle Listener
 ################################################################################
-
+ 
 terraform {
   required_version = ">= 1.0.0"
-
+ 
   # ============================================================================
   # TERRAFORM CLOUD BACKEND (Optional - uncomment and configure if using TF Cloud)
   # ============================================================================
@@ -34,7 +34,7 @@ terraform {
   #     name = "aws-app-oracle-db-docker"  # Change this
   #   }
   # }
-
+ 
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -42,10 +42,10 @@ terraform {
     }
   }
 }
-
+ 
 provider "aws" {
   region = var.aws_region
-
+ 
   default_tags {
     tags = {
       Project     = var.project_name
@@ -56,80 +56,80 @@ provider "aws" {
     }
   }
 }
-
+ 
 ################################################################################
 # Data Sources
 ################################################################################
-
+ 
 # Ubuntu 24.04 LTS AMI (recommended for Docker)
 data "aws_ami" "ubuntu_24" {
   most_recent = true
   owners      = ["099720109477"]  # Canonical
-
+ 
   filter {
     name   = "name"
     values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"]
   }
-
+ 
   filter {
     name   = "virtualization-type"
     values = ["hvm"]
   }
 }
-
+ 
 # Ubuntu 22.04 LTS AMI (alternative)
 data "aws_ami" "ubuntu_22" {
   most_recent = true
   owners      = ["099720109477"]  # Canonical
-
+ 
   filter {
     name   = "name"
     values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
   }
-
+ 
   filter {
     name   = "virtualization-type"
     values = ["hvm"]
   }
 }
-
+ 
 data "aws_availability_zones" "available" {
   state = "available"
 }
-
+ 
 ################################################################################
 # Local Values
 ################################################################################
-
+ 
 locals {
   # Choose Ubuntu version based on variable
   ami_id = var.use_ubuntu_24 ? data.aws_ami.ubuntu_24.id : data.aws_ami.ubuntu_22.id
 }
-
+ 
 ################################################################################
 # Modules
 ################################################################################
-
+ 
 module "vpc" {
   source = "../../modules/vpc"
-
+ 
   vpc_cidr           = var.vpc_cidr
   public_subnet_cidr = var.public_subnet_cidr
   availability_zone  = data.aws_availability_zones.available.names[0]
   environment        = var.environment
   tags               = var.tags
 }
-
+ 
 module "iam" {
   source = "../../modules/iam"
-
+ 
   environment = var.environment
   tags        = var.tags
 }
-
+ 
 module "security" {
   source = "../../modules/security"
-
+ 
   vpc_id           = module.vpc.vpc_id
   environment      = var.environment
   ssh_allowed_cidr = var.ssh_allowed_cidr
@@ -137,11 +137,11 @@ module "security" {
   db_port          = var.db_port  # 1521 for Oracle
   tags             = var.tags
 }
-
+ 
 # Oracle XE DB Server (Docker Compose) - Must be created FIRST
 module "db" {
   source = "../../modules/ec2-db"
-
+ 
   ami_id                   = local.ami_id
   instance_type            = var.db_instance_type  # Minimum t3.medium for Oracle XE
   subnet_id                = module.vpc.public_subnet_id
@@ -158,67 +158,30 @@ module "db" {
   elastic_ip_allocation_id = var.db_elastic_ip_allocation_id
   tags                     = var.tags
 }
-
-################################################################################
-# Wait for DB Server cloud-init to complete (Oracle XE + Seed Data)
-# This ensures Terraform only proceeds after DB is FULLY ready
-################################################################################
-resource "null_resource" "wait_for_db_ready" {
-  depends_on = [module.db]
-
-  # Trigger re-run if DB instance changes
-  triggers = {
-    db_instance_id = module.db.instance_id
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "echo '=== Waiting for cloud-init to complete... ==='",
-      "sudo cloud-init status --wait",
-      "echo '=== cloud-init completed! ==='",
-      "echo ''",
-      "echo '=== Waiting for Oracle Database to be ready... ==='",
-      "for i in $(seq 1 60); do if docker exec oracle-xe sqlplus -S system/${var.db_password}@XEPDB1 </dev/null 2>/dev/null | grep -q 'Connected'; then echo 'Oracle is accepting connections!'; break; fi; echo \"Attempt $i: Waiting for Oracle...\"; sleep 10; done",
-      "echo ''",
-      "echo '=== Checking seed data... ==='",
-      "docker exec oracle-xe bash -c \"echo 'SELECT COUNT(*) FROM customers;' | sqlplus -S ${var.db_user}/${var.db_password}@XEPDB1\" || echo 'Table check completed'",
-      "echo ''",
-      "echo '=== DB Server is FULLY ready! ==='"
-    ]
-
-    connection {
-      type        = "ssh"
-      host        = module.db.public_ip
-      user        = "ubuntu"
-      private_key = var.private_key_content
-      timeout     = "15m"
-    }
-  }
-}
-
+ 
 #------------------------------------------------------------------------------
 # S3 Bucket for Data Pump exports
 #------------------------------------------------------------------------------
 resource "aws_s3_bucket" "demo_bucket" {
   bucket = var.s3_bucket_name
-
+ 
   tags = {
     Name        = var.s3_bucket_name
     Environment = var.environment
   }
 }
-
+ 
 resource "aws_s3_bucket_versioning" "demo_bucket" {
   bucket = aws_s3_bucket.demo_bucket.id
   versioning_configuration {
     status = "Enabled"
   }
 }
-
-# App Server - Created AFTER DB is FULLY READY (cloud-init + Oracle + seed data)
+ 
+# App Server - Created AFTER DB (needs DB private IP)
 module "app" {
   source = "../../modules/ec2-app"
-
+ 
   ami_id               = local.ami_id
   instance_type        = var.app_instance_type
   subnet_id            = module.vpc.public_subnet_id
@@ -230,16 +193,14 @@ module "app" {
   root_volume_size     = var.app_volume_size
   create_eip           = var.create_app_eip
   app_port             = var.app_port
-  
   # Oracle Database connection info (passed to user_data)
   db_host     = module.db.private_ip
   db_port     = var.db_port
   db_service  = var.db_service
   db_user     = var.db_user
   db_password = var.db_password
-  
   tags = var.tags
-
-  # CRITICAL: Wait for null_resource (DB fully ready), not just module.db
-  depends_on = [null_resource.wait_for_db_ready]
+ 
+  # Explicit dependency - wait for DB to be ready
+  depends_on = [module.db]
 }
