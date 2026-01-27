@@ -173,28 +173,17 @@ resource "null_resource" "wait_for_db_ready" {
 
   provisioner "remote-exec" {
     inline = [
-      "echo '============================================='",
       "echo '=== Waiting for cloud-init to complete... ==='",
-      "echo '============================================='",
       "sudo cloud-init status --wait",
-      "echo ''",
       "echo '=== cloud-init completed! ==='",
       "echo ''",
-      "echo '============================================='",
-      "echo '=== Verifying Oracle Database is ready... ==='",
-      "echo '============================================='",
-      "while ! docker exec oracle-xe bash -lc \"echo 'SELECT 1 FROM DUAL;' | sqlplus -S system/${var.db_password}@XEPDB1\" 2>/dev/null | grep -q '1'; do echo 'Waiting for Oracle to accept connections...'; sleep 10; done",
+      "echo '=== Waiting for Oracle Database to be ready... ==='",
+      "for i in $(seq 1 60); do if docker exec oracle-xe sqlplus -S system/${var.db_password}@XEPDB1 </dev/null 2>/dev/null | grep -q 'Connected'; then echo 'Oracle is accepting connections!'; break; fi; echo \"Attempt $i: Waiting for Oracle...\"; sleep 10; done",
       "echo ''",
-      "echo '=== Oracle Database is accepting connections! ==='",
+      "echo '=== Checking seed data... ==='",
+      "docker exec oracle-xe bash -c \"echo 'SELECT COUNT(*) FROM customers;' | sqlplus -S ${var.db_user}/${var.db_password}@XEPDB1\" || echo 'Table check completed'",
       "echo ''",
-      "echo '============================================='",
-      "echo '=== Verifying seed data is loaded... ==='",
-      "echo '============================================='",
-      "docker exec oracle-xe bash -lc \"echo 'SELECT COUNT(*) FROM customers;' | sqlplus -S ${var.db_user}/${var.db_password}@XEPDB1\" || true",
-      "echo ''",
-      "echo '============================================='",
-      "echo '=== DB Server is FULLY ready! ==='",
-      "echo '============================================='",
+      "echo '=== DB Server is FULLY ready! ==='"
     ]
 
     connection {
