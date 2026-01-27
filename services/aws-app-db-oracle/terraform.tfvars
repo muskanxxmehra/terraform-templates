@@ -23,10 +23,10 @@ public_subnet_cidr = "10.0.1.0/24"
 # Security Settings
 #------------------------------------------------------------------------------
 # Name of your existing SSH key pair in AWS
-key_name = "your-key-name"
+key_name = "my-key-pair"
 
-# Path to your SSH private key file (used to wait for DB readiness)
-private_key_path = "~/.ssh/your-key-name.pem"
+# NOTE: private_key_content should be added in Terraform Cloud as a SENSITIVE variable
+# Do NOT put your private key in this file!
 
 # Restrict SSH access to your IP only (recommended for production)
 # Use ["0.0.0.0/0"] only for development/testing
@@ -73,3 +73,34 @@ s3_bucket_name = "cfwdemobucket"
 #------------------------------------------------------------------------------
 # aws_access_key_id     = "YOUR_ACCESS_KEY_ID"
 # aws_secret_access_key = "YOUR_SECRET_ACCESS_KEY"
+```
+
+---
+
+## STEP 4: Add Variable in Terraform Cloud
+
+1. Go to **Terraform Cloud** → Your Workspace → **Variables**
+2. Click **+ Add variable**
+3. Fill in:
+
+| Field | Value |
+|-------|-------|
+| **Key** | `private_key_content` |
+| **Category** | Terraform variable |
+| **Value** | *(Paste entire content of `my-key-pair.pem` file)* |
+| **Sensitive** | ✅ **Check this box** |
+
+4. Click **Save variable**
+
+---
+
+## How to get your key content:
+
+1. Open `my-key-pair.pem` in Notepad
+2. Copy **EVERYTHING** (including the BEGIN/END lines):
+```
+-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEA...
+(many lines of random characters)
+...
+-----END RSA PRIVATE KEY-----
