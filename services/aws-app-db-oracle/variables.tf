@@ -56,9 +56,10 @@ variable "key_name" {
   type        = string
 }
 
-variable "private_key_path" {
-  description = "Path to SSH private key file for connecting to EC2 instances (used by null_resource to wait for DB)"
+variable "private_key_content" {
+  description = "Content of SSH private key for connecting to EC2 instances (paste entire .pem file content)"
   type        = string
+  sensitive   = true
 }
 
 variable "ssh_allowed_cidr" {
