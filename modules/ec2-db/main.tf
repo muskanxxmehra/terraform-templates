@@ -26,7 +26,7 @@ resource "aws_instance" "db" {
   }))
 
   tags = merge(var.tags, {
-    Name     = "${var.environment}-oracle-db-server"
+    Name     = "${var.environment}-CFW_Demo_DB"
     Role     = "Database"
     Database = "Oracle XE 21c (Docker)"
   })
