@@ -56,6 +56,11 @@ variable "key_name" {
   type        = string
 }
 
+variable "private_key_path" {
+  description = "Path to SSH private key file for connecting to EC2 instances (used by null_resource to wait for DB)"
+  type        = string
+}
+
 variable "ssh_allowed_cidr" {
   description = "CIDR blocks allowed for SSH access"
   type        = list(string)
