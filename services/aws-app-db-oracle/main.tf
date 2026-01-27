@@ -159,6 +159,54 @@ module "db" {
   tags                     = var.tags
 }
 
+################################################################################
+# Wait for DB Server cloud-init to complete (Oracle XE + Seed Data)
+# This ensures Terraform only proceeds after DB is FULLY ready
+################################################################################
+resource "null_resource" "wait_for_db_ready" {
+  depends_on = [module.db]
+
+  # Trigger re-run if DB instance changes
+  triggers = {
+    db_instance_id = module.db.instance_id
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "echo '============================================='",
+      "echo '=== Waiting for cloud-init to complete... ==='",
+      "echo '============================================='",
+      "sudo cloud-init status --wait",
+      "echo ''",
+      "echo '=== cloud-init completed! ==='",
+      "echo ''",
+      "echo '============================================='",
+      "echo '=== Verifying Oracle Database is ready... ==='",
+      "echo '============================================='",
+      "while ! docker exec oracle-xe bash -lc \"echo 'SELECT 1 FROM DUAL;' | sqlplus -S system/${var.db_password}@XEPDB1\" 2>/dev/null | grep -q '1'; do echo 'Waiting for Oracle to accept connections...'; sleep 10; done",
+      "echo ''",
+      "echo '=== Oracle Database is accepting connections! ==='",
+      "echo ''",
+      "echo '============================================='",
+      "echo '=== Verifying seed data is loaded... ==='",
+      "echo '============================================='",
+      "docker exec oracle-xe bash -lc \"echo 'SELECT COUNT(*) FROM customers;' | sqlplus -S ${var.db_user}/${var.db_password}@XEPDB1\" || true",
+      "echo ''",
+      "echo '============================================='",
+      "echo '=== DB Server is FULLY ready! ==='",
+      "echo '============================================='",
+    ]
+
+    connection {
+      type        = "ssh"
+      host        = module.db.public_ip
+      user        = "ubuntu"
+      private_key = file(var.private_key_path)
+      timeout     = "15m"
+    }
+  }
+}
+
 #------------------------------------------------------------------------------
 # S3 Bucket for Data Pump exports
 #------------------------------------------------------------------------------
@@ -178,7 +226,7 @@ resource "aws_s3_bucket_versioning" "demo_bucket" {
   }
 }
 
-# App Server - Created AFTER DB (needs DB private IP)
+# App Server - Created AFTER DB is FULLY READY (cloud-init + Oracle + seed data)
 module "app" {
   source = "../../modules/ec2-app"
 
@@ -203,6 +251,6 @@ module "app" {
   
   tags = var.tags
 
-  # Explicit dependency - wait for DB to be ready
-  depends_on = [module.db]
+  # CRITICAL: Wait for null_resource (DB fully ready), not just module.db
+  depends_on = [null_resource.wait_for_db_ready]
 }
