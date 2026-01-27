@@ -201,7 +201,7 @@ resource "null_resource" "wait_for_db_ready" {
       type        = "ssh"
       host        = module.db.public_ip
       user        = "ubuntu"
-      private_key = file(var.private_key_path)
+      private_key = var.private_key_content
       timeout     = "15m"
     }
   }
