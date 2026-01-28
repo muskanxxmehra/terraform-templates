@@ -4,7 +4,7 @@
 
 # App Server Security Group
 resource "aws_security_group" "app" {
-  name        = "${var.environment}-app-sg"
+  name        = "${var.environment}-cwf-app-sg"
   description = "Security group for application server"
   vpc_id      = var.vpc_id
 
@@ -110,7 +110,7 @@ resource "aws_security_group" "db" {
   }
 
   tags = merge(var.tags, {
-    Name = "${var.environment}-oracle-db-sg"
+    Name = "${var.environment}-cwf-oracle-db-sg"
   })
 }
 
