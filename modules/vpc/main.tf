@@ -9,7 +9,7 @@ resource "aws_vpc" "main" {
   enable_dns_support   = true
 
   tags = merge(var.tags, {
-    Name = "${var.environment}-vpc"
+    Name = "${var.environment}-cwf-vpc"
   })
 }
 
@@ -17,7 +17,7 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
   tags = merge(var.tags, {
-    Name = "${var.environment}-igw"
+    Name = "${var.environment}-cwfigw"
   })
 }
 
@@ -28,7 +28,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = merge(var.tags, {
-    Name = "${var.environment}-public-subnet"
+    Name = "${var.environment}-cwf-public-subnet"
     Type = "Public"
   })
 }
@@ -42,7 +42,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = merge(var.tags, {
-    Name = "${var.environment}-public-rt"
+    Name = "${var.environment}-cwf-public-rt"
   })
 }
 
